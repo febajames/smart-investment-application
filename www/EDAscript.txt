@@ -1,0 +1,199 @@
+library(shinydashboard)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+
+model_data <- read.csv("LendingClub_Dashboard/data/model_data.csv",header = TRUE,sep=",",stringsAsFactors = FALSE)
+model_data$loan_status<-factor(model_data$loan_status)
+
+header <- dashboardHeader(  title = "Lending Club",
+  dropdownMenu(
+    type = "messages",
+    messageItem(
+      from = "Lending Club",
+      message = "Build your Portfolio now and start investing",
+      href = "https://www.lendingclub.com/investing/alternative-assets/diversified-portfolio"
+    )),
+  dropdownMenu(
+    type = "notifications",
+    notificationItem(text = 
+                       "10 investments of your choice found!")
+  )
+)
+sidebar <- dashboardSidebar(
+ sidebarMenu(
+   menuItem(text = "Input Data", tabName = "in_dt"),
+   menuItem(text = "Default Risk %", tabName = "forBorrowers"),
+   menuItem(text = "Shortlist Investment", tabName = "forinvestors")
+   ,menuItem(text = "Exploratory Data Analysis", tabName = "eda"))
+)
+body <- dashboardBody(
+  tabItems(
+    tabItem(tabName = "in_dt", 
+            fluidRow(
+              box(fileInput('datafile', 'Choose CSV file',
+                            accept=c('text/csv', 'text/comma-separated-values,text/plain'))),
+              box(tableOutput("filetable"))
+            )
+            
+    ),
+    tabItem(tabName = "forBorrowers"),
+    tabItem(tabName = "forinvestors",
+            fluidRow(
+              box(title = "General Information"
+                  ,status = "primary"
+                  ,solidHeader = TRUE 
+                  ,collapsible = TRUE
+                  ,sliderInput(inputId = "int_rt",
+                               label = "interest rate:",
+                               min = 5, max = 30, value = c(5,10))
+                  ,sliderInput(inputId = "dti",
+                              label = "debt to income ration:",
+                              min = 5, max = 30, value = 2),
+              
+              box(title = "Borrower Information"
+                  ,status = "primary"
+                  ,solidHeader = TRUE 
+                  ,collapsible = TRUE
+                  ,uiOutput("purpose")
+                  ,uiOutput("empdur")
+                  ,sliderInput(inputId = "annualinc",
+                               label = "Annual Income:",
+                               min = 500, max = 50000, value = 10000)
+                  ,sliderInput(inputId = "loan_amt",
+                               label = "Loan Amount:",
+                               min = 500, max = 50000, value = 10000)
+              )
+            ),
+            fluidRow(
+              column(
+                dataTableOutput("tbl"), width = 3
+              )
+            )
+            )),
+    tabItem(tabName = "eda", 
+            tabBox(width = "100",
+              tabPanel("Univariate",
+                plotlyOutput("UPlot1", width = "65%"),
+                plotlyOutput("UPlot2", width = "65%"),
+                plotlyOutput("UPlot3", width = "65%"),
+                plotlyOutput("UPlot4", width = "65%"),
+                plotlyOutput("UPlot5",width = "65%"),
+                plotlyOutput("UPlot6",width = "65%"),
+                plotlyOutput("UPlot7",width = "65%")),
+              tabPanel("Bivariate",
+                plotlyOutput("BPlot1", width = "65%"),
+                plotlyOutput("BPlot2", width = "65%"),
+                plotlyOutput("BPlot3", width = "65%"),
+                plotlyOutput("BPlot4", width = "70%"),
+                plotlyOutput("BPlot5", width = "65%"),
+                plotlyOutput("BPlot6", width = "65%")),
+              tabPanel("Correlation Plot",
+                       img(src="Corr.jpg")),
+              tabPanel("Model Summary",
+                       img(src="Sum1.jpg"))
+           
+                 )
+            )
+    )
+)
+
+# Create the UI using the header, sidebar, and body
+ui <- dashboardPage(header, sidebar, body)
+
+server <- function(input, output) {
+  model_data
+  output$UPlot1 <- renderPlotly({
+    plot.status<-ggplot(model_data,aes(x=model_data$loan_status,y=((..count..)/sum(..count..))*100))
+    plot.status<-plot.status+geom_histogram(aes(fill=loan_status),stat="count",show.legend = FALSE)
+    plot.status<-plot.status+labs(y="Percent",x="Status")+ggtitle("Loan Status")
+  
+  p <- ggplotly(plot.status)
+  })
+  
+  output$UPlot2 <- renderPlotly({
+  plot.pur<-ggplot(model_data,aes(x=purpose))+geom_bar(width=0.7,position="dodge",fill="turquoise3",show.legend = FALSE)
+  plot.pur<-plot.pur+coord_flip()  
+  plot.pur<-plot.pur+labs(y="Count",x="Purpose")+ggtitle("LoanPurpose")
+  
+  p <- ggplotly(plot.pur)
+  })
+  
+  output$UPlot3 <- renderPlotly({
+  home<-filter(model_data,home_ownership %in% c("RENT","MORTGAGE","OTHER"))
+  plot.home<-ggplot(home,aes(x=home_ownership))+geom_bar(width=0.3,position="dodge",fill="turquoise3",show.legend = FALSE)
+  plot.home<-plot.home+labs(y="Count",x="Ownership Type")+ggtitle("Home Ownership Types")
+  
+  p <- ggplotly(plot.home)
+  })
+  
+  output$UPlot4 <- renderPlotly({
+    plot.lgrade<-ggplot(model_data,aes(x=sub_grade))+geom_bar(width=0.7,position="dodge",fill="turquoise3",show.legend = FALSE)
+    plot.lgrade<-plot.lgrade+labs(y="Count",x="Sub Grade")+ggtitle("Loan Grades")
+    
+    p <- ggplotly(plot.lgrade)
+  })
+  
+  output$UPlot5 <- renderPlotly({
+    plot.amt<-ggplot(model_data,aes(model_data$loan_amnt))+ geom_histogram(stat = "bin",binwidth = 2500, fill="turquoise3")
+    plot.amt<-plot.amt+labs(y="Count",x="Amount")+ggtitle("Loan Amounts")
+    
+    p <- ggplotly(plot.amt)
+  })
+
+  output$UPlot6 <- renderPlotly({
+    plot.rate<-ggplot(model_data,aes(x=model_data$int_rate))
+    plot.rate<-plot.rate+geom_histogram(stat = "bin",binwidth = 0.02, fill="turquoise3")
+    plot.rate<-plot.rate+labs(y="Count",x="Rate")+ggtitle("Interest Rates")
+    
+    p <- ggplotly(plot.rate)
+  })
+
+  output$UPlot7 <- renderPlotly({
+    plot.dti<-ggplot(model_data,aes(x=model_data$dti))
+    plot.dti<-plot.dti+geom_histogram(stat = "bin",binwidth = 5, fill="turquoise3")
+    plot.dti<-plot.dti+labs(y="Count",x="DTI")+ggtitle("Debt-to-Income Ratios")
+    
+    p <- ggplotly(plot.dti)
+  })
+  
+  output$BPlot1 <- renderPlotly({
+  plot.grade.int<-ggplot(model_data,aes(grade,int_rate,fill=grade))+geom_boxplot(outlier.color = "blue",show.legend = FALSE)+labs(title="Boxplot of Loan Grade vs. Interest Rates",x="Grade",y="Interest Rate")
+  
+  p <- ggplotly(plot.grade.int)
+  })
+  
+  output$BPlot2 <- renderPlotly({
+  plot.dti.status<-ggplot(model_data,aes(loan_status,dti,fill=loan_status))+geom_boxplot(outlier.color = "blue",show.legend = FALSE)+labs(title="Boxplot of Loan Status vs. Debt-to-Income Ratio",x="Loan Status",y="DTI")+guides(color=guide_legend("my title"))
+  
+  p <- ggplotly(plot.dti.status)
+  })
+  
+  output$BPlot3 <- renderPlotly({
+  plot.amt.status<-ggplot(model_data,aes(loan_status,loan_amnt,fill=loan_status))+geom_boxplot(outlier.color = "blue",show.legend = FALSE)+labs(title="Boxplot of Loan Status vs. Loan Amount",x="Loan Status",y="Loan Amount")
+  
+  p <- ggplotly(plot.amt.status)
+  })
+  
+  output$BPlot4 <- renderPlotly({
+    plot.sub.status<-ggplot(model_data, aes(sub_grade))+geom_bar(aes(fill=loan_status),position = "fill",show.legend = FALSE)+labs(y="Percent",x="Sub Grade")+ggtitle("Proportion of Fully Paid and Not Fully Paid by Loan Sub Grades")
+    
+    p <- ggplotly(plot.sub.status)
+  })
+  
+  output$BPlot5 <- renderPlotly({
+  plot.amt.pur<-ggplot(model_data,aes(purpose))+geom_bar(aes(fill=loan_status),show.legend = FALSE)+theme(axis.text.x=element_text(size=8, angle = 90))
+  plot.amt.pur<-plot.amt.pur+labs(x="Purpose")+ggtitle("Proportion of Fully Paid and Not Fully Paid by Loan Purpose")
+  
+  p <- ggplotly(plot.amt.pur)
+  })
+  
+  output$BPlot6 <- renderPlotly({
+  home=filter(model_data,home_ownership %in% c("RENT","MORTGAGE"))
+  plot.type.status<-ggplot(home, aes(home_ownership))+geom_bar(aes(fill=loan_status),position = "fill",show.legend = FALSE)+labs(y="Percent",x="Ownership Type")+ggtitle("Proportion of Fully Paid and Not Fully Paid by Home Ownership Type")
+
+  p <- ggplotly(plot.type.status)
+  })
+  
+}
+shinyApp(ui, server)
