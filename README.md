@@ -8,5 +8,9 @@ interactive RShiny application that will allow investors to access borrower info
 
 **model_call.R** - logistic regression model code.
 
+**data** - datasets and saved model.
+
+**www** - all media(images) used.
+
 
 
