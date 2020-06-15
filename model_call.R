@@ -1,8 +1,8 @@
+# packages
 library(dplyr)
 library(formattable)
-# A function to run the logistic model
 
-
+# Function to run the logistic model
 risk_propensity <- function(model_data, sample_data){
   
   
@@ -23,6 +23,4 @@ risk_propensity <- function(model_data, sample_data){
     
   outpt <- outpt[order(-repayment_probability),] 
   return(as.datatable(formattable(outpt, list(repayment_probability = normalize_bar("lime",0.2)))))
-  #return(outpt)
-  
 }
