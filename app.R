@@ -1,12 +1,11 @@
 # Shiny app for smart investment
 
-
 # install packages if not present --------------------------------------------------------
 list.of.packages <- c("shinydashboard", "dplyr","formattable","shinycssloaders","ggplot2","plotly")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
-#load libraries---------------------------------------------------------------------------
+# load libraries---------------------------------------------------------------------------
 library(shinydashboard)
 library(dplyr)
 library(formattable)
@@ -15,9 +14,8 @@ library(plotly)
 library(ggplot2)
 source("model_call.R")
 
-
 # Read the input data --------------------------------------------------------------------
-#input data for grades
+# input data for grades
 intgrades <- read.csv("data/interestgrades.csv",sep = ",",stringsAsFactors = FALSE)
 #input data for model
 model_data <- readRDS("data/model_data.rds")
@@ -25,8 +23,7 @@ model_data$loan_status<-factor(model_data$loan_status)
 # input data for testing model
 sample_data <- readRDS("data/sample_data.rds")
 
-
-
+# ui
 header <- dashboardHeader(  title = "Smart Investment",
                            
                             tags$li(a(href = 'https://www.lendingclub.com/',
@@ -133,8 +130,7 @@ body <- dashboardBody(
                             plotlyOutput("UPlot5",width = "65%"),
                             plotlyOutput("UPlot6",width = "65%"),
                             plotlyOutput("UPlot7",width = "65%")),
-                   
-                   
+                     
                    tabPanel("Bivariate",
                    plotlyOutput("BPlot1", width = "65%"),
                    plotlyOutput("BPlot2", width = "65%"),
@@ -158,14 +154,10 @@ body <- dashboardBody(
   
 )
 
-
-
 # Create the UI using the header, sidebar, and body
 ui <- dashboardPage(header, sidebar, body, skin = "red")
 
-server <- function(input, output, session) {
-  
-   
+server <- function(input, output, session) {   
  
   # Input selection  based on input data.
   output$purpose <- renderUI({
@@ -192,8 +184,7 @@ server <- function(input, output, session) {
     # Create the Select input
     checkboxGroupInput(inputId = "emp_dur", #name of input
                 label = "Duration of employment:", #label displayed in ui
-                choices =  as.character(unique(dat$emp_dur)))
-    
+                choices =  as.character(unique(dat$emp_dur)))    
   })
   
   observe({
@@ -218,9 +209,6 @@ server <- function(input, output, session) {
                          min = 500, max = 500000, value = min(sample_data$annual_inc) + 1)
     }
   })
- 
-  
-  
   
   filtered <- reactive({
     
@@ -245,8 +233,6 @@ server <- function(input, output, session) {
    return(a)
   })
   
-  
-  
   output$tbl <-  DT::renderDT({
     
     if(input$model_run > 0 & nrow(filtered()) != 0){
@@ -255,15 +241,12 @@ server <- function(input, output, session) {
       results <- filtered()
       
     }
-    
-    
+     
     return(results)
     
   }) 
   
   output$sgrade <- renderDataTable(intgrades)
-  
-  
   
   output$approvalBox <- renderInfoBox({
     s = input$tbl_rows_selected
@@ -301,8 +284,7 @@ server <- function(input, output, session) {
     updateTabItems(session, "All","forinvestors")
   })
   
-  
-  # EDA plots ----------------------------------
+  # EDA plots
   model_data
   output$UPlot1 <- renderPlotly({
     plot.status<-ggplot(model_data,aes(x=model_data$loan_status,y=((..count..)/sum(..count..))*100))
@@ -409,7 +391,5 @@ server <- function(input, output, session) {
   })
   
 }
-
-
 
 shinyApp(ui, server)
